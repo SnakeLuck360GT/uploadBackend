@@ -1,8 +1,9 @@
-// Install dependencies: express, multer, axios, cors
+// Install dependencies: express, multer, axios, cors, form-data
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
 const cors = require("cors");
+const FormData = require("form-data");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,16 +23,13 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     
     try {
         const formData = new FormData();
-        formData.append("file", file.buffer, file.originalname);
-        
+        formData.append("file", file.buffer, { filename: file.originalname, contentType: file.mimetype });
+
         // Upload image directly to Discord webhook
-        const response = await axios.post(DISCORD_WEBHOOK_URL, formData, {
-            headers: formData.getHeaders()
+        await axios.post(DISCORD_WEBHOOK_URL, formData, {
+            headers: formData.getHeaders(),
         });
 
-        // Extract uploaded image URL
-        const imageUrl = response.data.attachments[0].url;
-        
         // Send embed with image
         await axios.post(DISCORD_WEBHOOK_URL, {
             username: "Image Uploader",
@@ -39,7 +37,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
                 title: "New Image Uploaded",
                 description: `IP: \`${ip}\`\nFilename: \`${file.originalname}\``,
                 color: 16711680,
-                image: { url: imageUrl }
+                image: { url: `attachment://${file.originalname}` }
             }],
         }, {
             headers: { "Content-Type": "application/json" }
