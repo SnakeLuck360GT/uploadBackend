@@ -6,12 +6,12 @@ const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL; // Store in Render Environment Variables
+const DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL";
 
 app.use(cors());
 app.use(express.json());
 
-const storage = multer.memoryStorage(); // Store images in memory
+const storage = multer.memoryStorage(); // Store files in memory instead of disk
 const upload = multer({ storage: storage });
 
 app.post("/upload", upload.single("image"), async (req, res) => {
@@ -19,19 +19,32 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     if (!file) return res.status(400).send("No file uploaded.");
     
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-
+    
     try {
+        const formData = new FormData();
+        formData.append("file", file.buffer, file.originalname);
+        
+        // Upload image directly to Discord webhook
+        const response = await axios.post(DISCORD_WEBHOOK_URL, formData, {
+            headers: formData.getHeaders()
+        });
+
+        // Extract uploaded image URL
+        const imageUrl = response.data.attachments[0].url;
+        
+        // Send embed with image
         await axios.post(DISCORD_WEBHOOK_URL, {
             username: "Image Uploader",
             embeds: [{
                 title: "New Image Uploaded",
-                description: `IP: \`${ip}\`\\nFilename: \`${file.originalname}\``,
+                description: `IP: \`${ip}\`\nFilename: \`${file.originalname}\``,
                 color: 16711680,
+                image: { url: imageUrl }
             }],
         }, {
             headers: { "Content-Type": "application/json" }
         });
-
+        
         res.send("File uploaded and sent to Discord.");
     } catch (error) {
         console.error(error);
