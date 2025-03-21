@@ -7,7 +7,7 @@ const FormData = require("form-data");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 app.use(cors());
 app.use(express.json());
